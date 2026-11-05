@@ -33,6 +33,13 @@ var _particles: Array[Dictionary] = []
 var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 
+const HALO_RADIUS: float = 37.0
+const HALO_SQUASH: float = 0.62
+const HALO_FILL: Color = Color(1.0, 1.0, 1.0, 0.9)
+const HALO_RIM: Color = Color(0.3, 0.2, 0.35, 0.9)
+const HALO_RIM_WIDTH: float = 2.0
+
+
 func _ready() -> void:
 	_rng.randomize()
 	_sprite = Sprite2D.new()
@@ -101,6 +108,11 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	# Backing halo so the orange carrot stays visible on orange organs (mouth, esophagus, intestines).
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, HALO_SQUASH))
+	draw_circle(Vector2.ZERO, HALO_RADIUS, HALO_FILL, true, -1.0, true)
+	draw_circle(Vector2.ZERO, HALO_RADIUS, HALO_RIM, false, HALO_RIM_WIDTH / HALO_SQUASH, true)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	for p: Dictionary in _particles:
 		var t: float = float(p["age"]) / float(p["life"])
 		var eased: float = 1.0 - (1.0 - t) * (1.0 - t)
