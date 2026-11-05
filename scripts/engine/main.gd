@@ -274,6 +274,20 @@ func _make_label(label_text: String, font_size: int, color: Color = COL_TEXT) ->
 	return lbl
 
 
+## Part 1 feedback quotes a station's info text (up to 5 lines); part 2 feedback is short,
+## which leaves room for its 12 long cards.
+const FEEDBACK_LINES_PART1: int = 5
+const FEEDBACK_LINES_PART2: int = 2
+
+
+func _set_feedback_lines(lines: int) -> void:
+	var font: Font = _feedback_label.get_theme_font("font")
+	var font_size: int = _feedback_label.get_theme_font_size("font_size")
+	var line_h: float = font.get_height(font_size) + float(_feedback_label.get_theme_constant("line_spacing"))
+	_feedback_label.custom_minimum_size = Vector2(100, ceilf(line_h * float(lines)) + 2.0)
+	_feedback_label.max_lines_visible = lines
+
+
 func _make_wrap_label(font_size: int, color: Color = COL_TEXT) -> Label:
 	var lbl: Label = _make_label("", font_size, color)
 	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -408,10 +422,12 @@ func _build_explore() -> void:
 
 func _build_quiz() -> void:
 	_prompt_label = _make_wrap_label(21, COL_ACCENT)
-	_prompt_label.custom_minimum_size = Vector2(100, 54)
+	# Fixed heights so the card grid below never jumps while a student is dragging.
+	_prompt_label.custom_minimum_size = Vector2(100, 64)
+	_prompt_label.max_lines_visible = 2
 	_quiz_box.add_child(_prompt_label)
 	_feedback_label = _make_wrap_label(16)
-	_feedback_label.custom_minimum_size = Vector2(100, 100)
+	_set_feedback_lines(FEEDBACK_LINES_PART1)
 	_quiz_box.add_child(_feedback_label)
 	_stats_label = _make_label("", 17, COL_MUTED)
 	_quiz_box.add_child(_stats_label)
@@ -706,6 +722,7 @@ func _build_cards(items: Array[Dictionary], columns: int, font_size: int, key: S
 
 func restart_quiz() -> void:
 	quiz_part = 1
+	_set_feedback_lines(FEEDBACK_LINES_PART1)
 	_place_token_at_start()
 	quiz_complete = false
 	quiz2_complete = false
@@ -740,6 +757,7 @@ func start_part2() -> void:
 	if not system.has_match_quiz or not quiz_complete:
 		return
 	quiz_part = 2
+	_set_feedback_lines(FEEDBACK_LINES_PART2)
 	quiz2_complete = false
 	mistakes2 = 0
 	matched_count = 0
