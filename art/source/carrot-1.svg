@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 49.107 23.621">
+  <defs>
+    <style>
+      .cls-1{fill:#f7931e;stroke:#f15a24;stroke-width:3;stroke-miterlimit:10}
+      .cls-2{fill:none;stroke:#f15a24;stroke-width:2;stroke-miterlimit:10}
+    </style>
+  </defs>
+  <title>Selection</title>
+  <g id="Selection">
+    <path d="M45.58 11.088 C36.051 7.013 3.433 -5.06 2.383 6.142 C2.142 8.707 -0.844 16.819 5.738 20.431 C12.475 24.128 36.355 21.165 45.438 17.244 C48.695 15.838 47.898 12.079 45.58 11.088 Z" class="cls-1"/>
+    <path d="M8.844 10.248 C8.844 12.733 8.203 15.819 9.087 18.178 C9.228 18.553 10.037 20.387 10.563 20.255" class="cls-2"/>
+    <path d="M15.415 11.057 C15.616 11.117 15.853 13.279 15.907 13.666 C16.056 14.721 17.81 19.664 19.155 19.952" class="cls-2"/>
+    <path d="M23.906 11.562 C24.257 12.148 24.447 14.752 24.917 15.808 C25.426 16.952 27.348 18.19 27.848 18.84" class="cls-2"/>
+    <path d="M32.195 11.764 C32.64 13.102 34.822 18.374 36.642 18.234" class="cls-2"/>
+  </g>
+</svg>

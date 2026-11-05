@@ -1,0 +1,5 @@
+.godot/
+*.import
+exports/
+*.tmp
+*.zip
