@@ -47,4 +47,6 @@ func _draw() -> void:
 		var wave: float = 0.5 + 0.5 * sin(_pulse * 6.0)
 		var ring_r: float = 19.0 + 5.0 * wave
 		draw_arc(hp, ring_r + 5.0, 0.0, TAU, 48, Color(COL_HIGHLIGHT.r, COL_HIGHLIGHT.g, COL_HIGHLIGHT.b, 0.35 * (1.0 - wave)), 4.0, true)
+		# White edge so the orange ring still shows on orange organs (mouth, small intestine).
+		draw_arc(hp, ring_r, 0.0, TAU, 48, Color.WHITE, 8.0, true)
 		draw_arc(hp, ring_r, 0.0, TAU, 48, COL_HIGHLIGHT, 4.0, true)
