@@ -1,7 +1,7 @@
 class_name BoxTarget
 extends Button
 ## A label box on the map, one per organ. Shows "?", the name, or name + function.
-## In quiz part 2 it is also a drop target and pressable (tap a card, then tap a box).
+## In the quiz it can also be a drop target and pressable (tap a card, then tap a box).
 
 signal answer_dropped(target_id: String, card_id: String)
 signal box_pressed(target_id: String)
@@ -108,7 +108,7 @@ func set_role(new_role: Role) -> void:
 	queue_redraw()
 
 
-## Part 2 (true): receives mouse/touch/keyboard. Otherwise invisible to input.
+## Quiz drop target (true): receives mouse/touch/keyboard. Otherwise invisible to input.
 func set_interactive(on: bool) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP if on else Control.MOUSE_FILTER_IGNORE
 	focus_mode = Control.FOCUS_ALL if on else Control.FOCUS_NONE
@@ -157,11 +157,22 @@ func _on_pressed() -> void:
 	box_pressed.emit(target_id)
 
 
+## Accepts quiz part 2 job cards ("organ_id") and quiz part 1 cards ("card_id").
 func _can_drop_data(_at_position: Vector2, data: Variant) -> bool:
-	return mouse_filter != Control.MOUSE_FILTER_IGNORE and not locked \
-		and data is Dictionary and (data as Dictionary).has("organ_id")
+	return mouse_filter != Control.MOUSE_FILTER_IGNORE and not locked and _card_from(data) != ""
 
 
 func _drop_data(_at_position: Vector2, data: Variant) -> void:
-	if data is Dictionary and (data as Dictionary).has("organ_id"):
-		answer_dropped.emit(target_id, str((data as Dictionary)["organ_id"]))
+	var card_id: String = _card_from(data)
+	if card_id != "":
+		answer_dropped.emit(target_id, card_id)
+
+
+func _card_from(data: Variant) -> String:
+	if not data is Dictionary:
+		return ""
+	var d: Dictionary = data
+	for key: String in ["organ_id", "card_id"]:
+		if d.has(key):
+			return str(d[key])
+	return ""

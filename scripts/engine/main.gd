@@ -42,6 +42,12 @@ var _loop_timer: float = 0.0
 var _syncing: bool = false
 var _selected_card_id: String = ""
 var _revealed: Dictionary = {}
+## Organ ids labelled in quiz part 1 (helper organs dropped on their own boxes).
+var _labelled: Dictionary = {}
+## Station whose text and highlights are showing. Switches to the next station as soon as the
+## token crosses into that organ (system.switch_t), before it reaches the station dot.
+var _display_station: int = -1
+var _crossed: bool = false
 var _matched: Dictionary = {}
 
 var _map: MapView
@@ -491,6 +497,8 @@ func _place_token_at_start() -> void:
 	_t = 0.0
 	_loop_timer = 0.0
 	current_station = -1
+	_display_station = -1
+	_crossed = false
 	token.reset_token()
 	token.position = system.start_pos
 	_map.set_highlight(-1)
@@ -559,9 +567,9 @@ func _apply_roles() -> void:
 	for id: String in system.organ_order:
 		var bt: BoxTarget = _boxes[id]
 		bt.set_role(BoxTarget.Role.NONE)
-	if current_station < 0:
+	if _display_station < 0:
 		return
-	var st: Dictionary = system.stations[current_station]
+	var st: Dictionary = system.stations[_display_station]
 	for hid: String in st["helpers"]:
 		var hb: BoxTarget = _boxes[hid]
 		hb.set_role(BoxTarget.Role.HELPER)
@@ -584,17 +592,17 @@ func _update_info() -> void:
 		ch.queue_free()
 	var last: int = system.station_count() - 1
 	for i: int in range(system.station_count()):
-		var here: bool = i == current_station
+		var here: bool = i == _display_station
 		_route_markers[i].text = ">" if here else ""
 		_route_names[i].add_theme_color_override("font_color", COL_ACCENT if here else COL_TEXT)
-	if current_station < 0:
+	if _display_station < 0:
 		_station_label.text = system.start_label
 		_info_label.text = START_TEXT
 		_breaking_label.visible = false
 		_helpers_label.visible = false
 		_end_label.visible = false
 		return
-	var st: Dictionary = system.stations[current_station]
+	var st: Dictionary = system.stations[_display_station]
 	_station_label.text = st["name"]
 	_info_label.text = st["info"]
 	var kinds: Array = st["digestion"]
@@ -613,7 +621,8 @@ func _update_info() -> void:
 		helper_names.append(str(system.organs[hid]["name"]))
 	_helpers_label.visible = not helper_names.is_empty()
 	_helpers_label.text = "Helpers: %s" % ", ".join(helper_names)
-	_end_label.visible = current_station == last and system.next_station(current_station) == -1
+	_end_label.visible = current_station == last and _display_station == last \
+		and system.next_station(current_station) == -1
 
 
 # ---------------------------------------------------------------- movement
@@ -625,11 +634,8 @@ func _begin_move() -> void:
 	_moving = true
 	_moving_segment = seg
 	_t = 0.0
-	_map.set_highlight(-1)
-	if not quiz_mode:
-		for id: String in system.organ_order:
-			var bt: BoxTarget = _boxes[id]
-			bt.set_role(BoxTarget.Role.NONE)
+	# The old station's text and highlights stay until the token crosses into the next organ.
+	_crossed = false
 	_refresh_buttons()
 
 
@@ -665,6 +671,8 @@ func _process(delta: float) -> void:
 func _advance(delta: float) -> void:
 	var move_speed: float = QUIZ_SPEED if quiz_mode else speed
 	_t += delta / system.travel_time(_moving_segment, move_speed)
+	if not _crossed and _t >= system.switch_t(_moving_segment):
+		_cross_border(_moving_segment)
 	if _t >= 1.0:
 		_arrive()
 		return
@@ -672,17 +680,29 @@ func _advance(delta: float) -> void:
 	token.on_travel(_moving_segment, _t)
 
 
+## The token has entered the organ of station `seg`: switch the panel and map highlights.
+func _cross_border(seg: int) -> void:
+	_crossed = true
+	_display_station = seg
+	_map.set_highlight(seg)
+	if quiz_mode:
+		_reveal_quiz_station(seg)
+	else:
+		_apply_roles()
+		_update_info()
+
+
 func _arrive() -> void:
 	_moving = false
+	if not _crossed:
+		_cross_border(_moving_segment)
 	current_station = _moving_segment
 	token.position = system.station_pos(current_station)
 	_busy = maxf(token.on_arrive(current_station), 0.0)
-	_map.set_highlight(current_station)
 	if quiz_mode:
 		_on_quiz_arrived()
 		return
-	_apply_roles()
-	_update_info()
+	_end_label.visible = system.next_station(current_station) == -1
 	if _playing:
 		_loop_timer = LOOP_PAUSE
 	_refresh_buttons()
@@ -731,8 +751,11 @@ func restart_quiz() -> void:
 	steps_done = 0
 	matched_count = 0
 	_revealed.clear()
+	_labelled.clear()
 	_matched.clear()
-	_set_boxes_interactive(false)
+	# Every "?" box takes drops: helper cards must land on their own box; station cards
+	# count anywhere on the map (a box just passes them on).
+	_set_boxes_interactive(true)
 	for id: String in system.organ_order:
 		var bt: BoxTarget = _boxes[id]
 		bt.locked = false
@@ -743,7 +766,11 @@ func restart_quiz() -> void:
 	var items: Array[Dictionary] = []
 	for i: int in range(system.station_count()):
 		items.append({"id": "station:%d" % i, "text": system.station_name(i)})
+	var organ_cards: Array[String] = system.all_quiz_helpers()
 	for oid: String in system.quiz_distractors:
+		if not organ_cards.has(oid):
+			organ_cards.append(oid)
+	for oid: String in organ_cards:
 		items.append({"id": "organ:%s" % oid, "text": str(system.organs[oid]["name"])})
 	_build_cards(items, 2, 18, "card_id")
 	_drop_area.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -793,7 +820,7 @@ func _set_feedback(text_str: String, color: Color) -> void:
 
 func _update_stats() -> void:
 	if quiz_part == 1:
-		_stats_label.text = "Progress: %d / %d     Mistakes: %d" % [steps_done, system.station_count(), mistakes]
+		_stats_label.text = "Progress: %d / %d     Mistakes: %d" % [steps_done, _part1_total(), mistakes]
 	else:
 		_stats_label.text = "Progress: %d / %d     Mistakes: %d" % [matched_count, system.organ_order.size(), mistakes2]
 
@@ -820,6 +847,12 @@ func _find_card(id: String) -> StationCard:
 
 func _on_card_selected(id: String) -> void:
 	if quiz_part == 1:
+		if _is_helper_card(id) and not quiz_complete and not _moving and _busy <= 0.0:
+			# Helper cards must go on their own box: tap the card, then tap the box.
+			_select_card(id if _selected_card_id != id else "")
+			if _selected_card_id != "":
+				_set_feedback("Now tap its box on the map.", COL_BLUE)
+			return
 		submit_answer(id)
 		return
 	if quiz2_complete:
@@ -840,11 +873,22 @@ func _on_map_dropped(card_id: String) -> void:
 
 
 func _on_box_dropped(target_id: String, card_id: String) -> void:
-	submit_match(target_id, card_id)
+	if quiz_part == 1:
+		submit_answer(card_id, target_id)
+	else:
+		submit_match(target_id, card_id)
 
 
 func _on_box_pressed(target_id: String) -> void:
-	if quiz_part != 2 or quiz2_complete:
+	if quiz_part == 1:
+		if quiz_complete:
+			return
+		if _selected_card_id == "":
+			_set_feedback("Tap a helper organ card first, then tap its box.", COL_MUTED)
+			return
+		submit_answer(_selected_card_id, target_id)
+		return
+	if quiz2_complete:
 		return
 	if _selected_card_id == "":
 		_set_feedback("Pick a job card first, then tap the organ.", COL_MUTED)
@@ -852,17 +896,29 @@ func _on_box_pressed(target_id: String) -> void:
 	submit_match(target_id, _selected_card_id)
 
 
-## Quiz part 1: card id is "station:<i>" or "organ:<id>".
-func submit_answer(card_id: String) -> void:
+## Quiz part 1: card id is "station:<i>" or "organ:<id>". `target_id` is the organ box it was
+## dropped on ("" = open map, or tapped). Station cards count anywhere; helper organ cards
+## must land on their own box, and the whole helper group must be labelled before moving on.
+func submit_answer(card_id: String, target_id: String = "") -> void:
 	if not quiz_mode or quiz_part != 1 or _moving or _busy > 0.0 or quiz_complete:
 		return
 	var expected: int = system.next_station(current_station)
 	var card: StationCard = _find_card(card_id)
 	if card != null and card.used:
 		return
+	if _is_helper_card(card_id):
+		_submit_helper(card, card_id.substr(6), target_id)
+		return
+	_select_card("")
 	var guess: int = -1
 	if card_id.begins_with("station:"):
 		guess = int(card_id.substr(8))
+	if guess == expected and guess >= 0 and not _pending_helpers().is_empty():
+		# Right stop, wrong time: a reminder, not a mistake.
+		_set_feedback("Right stop, but not yet! First label the helper organs on the map.", COL_ACCENT)
+		if card != null:
+			card.shake()
+		return
 	if guess == expected and guess >= 0:
 		steps_done += 1
 		if card != null:
@@ -921,9 +977,80 @@ func submit_match(target_id: String, card_id: String) -> void:
 		card.shake()
 
 
-func _on_quiz_arrived() -> void:
-	var st: Dictionary = system.stations[current_station]
-	_revealed[current_station] = true
+func _submit_helper(card: StationCard, oid: String, target_id: String) -> void:
+	_select_card("")
+	var organ_name: String = str(system.organs[oid]["name"])
+	if target_id == "":
+		_set_feedback("Drop the %s card right on its own box on the map." % organ_name, COL_ACCENT)
+		return
+	if target_id != oid:
+		mistakes += 1
+		_set_feedback("That box isn't the %s. Try another box." % organ_name, COL_RED)
+		_update_stats()
+		if card != null:
+			card.shake()
+		return
+	var pending: Array[String] = _pending_helpers()
+	if not pending.has(oid):
+		# Right box, wrong time: a reminder, not a mistake.
+		if pending.is_empty():
+			_set_feedback("Right box, but not yet! Follow %s: where does it go next?" % system.traveller_name, COL_ACCENT)
+		else:
+			_set_feedback("Right box, but not yet! Label the helper organs for this part first.", COL_ACCENT)
+		if card != null:
+			card.shake()
+		return
+	_labelled[oid] = true
+	steps_done += 1
+	if card != null:
+		card.mark_used()
+	var bt: BoxTarget = _boxes[oid]
+	bt.set_state(BoxTarget.State.NAME)
+	bt.set_interactive(false)
+	var left: int = _pending_helpers().size()
+	var msg: String = "Correct! %s" % str(system.organs[oid]["hint"])
+	if left > 0:
+		msg += " %d more to label." % left
+	else:
+		_prompt_label.text = _next_prompt()
+	_set_feedback(msg, COL_GREEN)
+	_update_stats()
+	_focus_first_card()
+
+
+func _is_helper_card(card_id: String) -> bool:
+	return card_id.begins_with("organ:") and system.all_quiz_helpers().has(card_id.substr(6))
+
+
+## Helper organs still to be labelled before the token may move to the next station.
+func _pending_helpers() -> Array[String]:
+	var left: Array[String] = []
+	var group: Dictionary = system.helper_group_before(system.next_station(current_station))
+	if group.is_empty():
+		return left
+	for oid: String in group["organs"]:
+		if not _labelled.has(oid):
+			left.append(oid)
+	return left
+
+
+func _part1_total() -> int:
+	return system.station_count() + system.all_quiz_helpers().size()
+
+
+func _next_prompt() -> String:
+	if not _pending_helpers().is_empty():
+		var group: Dictionary = system.helper_group_before(system.next_station(current_station))
+		return str(group["prompt"])
+	if current_station < 0:
+		return "Drag the FIRST stop for %s onto the map!" % system.traveller_name
+	var who: String = system.traveller_name.substr(0, 1).to_upper() + system.traveller_name.substr(1)
+	return "%s is in the %s. Drag the NEXT stop onto the map!" % [who, system.station_name(current_station)]
+
+
+## Quiz: the token has crossed into station `seg`'s organ; name its boxes and outline them.
+func _reveal_quiz_station(seg: int) -> void:
+	_revealed[seg] = true
 	for id: String in system.organ_order:
 		var bt: BoxTarget = _boxes[id]
 		bt.set_role(BoxTarget.Role.NONE)
@@ -931,12 +1058,17 @@ func _on_quiz_arrived() -> void:
 		for bid: String in system.stations[i]["boxes"]:
 			var rb: BoxTarget = _boxes[bid]
 			rb.set_state(BoxTarget.State.NAME)
-	for cid: String in st["boxes"]:
+			rb.set_interactive(false)
+	for cid: String in system.stations[seg]["boxes"]:
 		var cb: BoxTarget = _boxes[cid]
 		cb.set_role(BoxTarget.Role.CURRENT)
+
+
+func _on_quiz_arrived() -> void:
+	var st: Dictionary = system.stations[current_station]
 	_update_stats()
 	var info: String = st["info"]
-	if steps_done >= system.station_count():
+	if system.next_station(current_station) == -1:
 		quiz_complete = true
 		_prompt_label.text = "Part 1 complete! Mistakes: %d" % mistakes
 		_set_feedback("Correct! %s" % info, COL_GREEN)
@@ -949,6 +1081,6 @@ func _on_quiz_arrived() -> void:
 			_again_btn.visible = true
 			_again_btn.call_deferred("grab_focus")
 		return
-	_prompt_label.text = "%s is in the %s. Drag the NEXT stop onto the map!" % [(system.traveller_name.substr(0, 1).to_upper() + system.traveller_name.substr(1)), system.station_name(current_station)]
+	_prompt_label.text = _next_prompt()
 	_set_feedback("Correct! %s" % info, COL_GREEN)
 	_focus_first_card()

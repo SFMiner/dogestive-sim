@@ -1,8 +1,8 @@
 # Digestion Sim — Claude Code Project Context
 
 Simple visual (not a real simulation) Godot 4.5 illustration of digestion. A baby carrot moves station
-to station and changes SHAPE (carrot_1..6). Explore mode, quiz part 1 (order of stations, with accessory-organ
-distractors) and quiz part 2 (match organ functions to label boxes). HTML5 export; mouse, touch, keyboard.
+to station and changes SHAPE (carrot_1..6). Explore mode, quiz part 1 (order of stations; accessory organs must be
+labelled on their own boxes before the carrot moves on) and quiz part 2 (match organ functions to label boxes). HTML5 export; mouse, touch, keyboard.
 
 ## Standards
 - Godot 4.5, GDScript, TABS only, static typing, GL Compatibility; UI built in code; one scene.

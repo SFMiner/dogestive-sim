@@ -37,7 +37,7 @@ Travel: `t += delta / system.travel_time(seg, speed)`; position = `point_on_segm
 ## Files & owners
 ### Agent APP (Sonnet): `scripts/engine/main.gd`, `map_view.gd`, `station_card.gd`, `map_drop_area.gd`, `box_target.gd`
 **map_view.gd** — `class_name MapView extends Node2D`; `func setup(sys: SimSystem)`; draws white bg, the background
-texture into `system.background_rect`, a small dot at each station, and a pulsing orange ring at the current station
+texture into `system.background_rect` (no station dots: the art has pink pointer dots), and a pulsing orange ring at the current station
 (`set_highlight(index)`, -1 = none; `_process` only while highlighted).
 
 **box_target.gd** — `class_name BoxTarget extends Button` (flat, transparent StyleBoxEmpty for all states except focus),
@@ -64,13 +64,20 @@ but never after a drag (same guard as circulation).
   "Absorption: nutrients into blood" (blue), "No digestion" (grey); `info` text (autowrap); "Breaking down:" + `breaking_down`;
   "Helpers:" + comma list of helper organ names (omit row when empty). Route list of the 6 stations, current marked with ">".
 - Map: BoxTargets show NAME; boxes of the current station = `current`, helper boxes = `helper`; ring at current station.
+- Border switch: panel, outlines and ring switch to station i when the token passes `system.switch_t(i)` on segment i
+  (`segment_switch_t`, measured from the SVG organ shapes), not on arrival. The carrot's shape still changes on arrival.
 *Quiz part 1* (order):
 - Start: token reset at start_pos; all BoxTargets HIDDEN; cards = all stations (id "station:<i>", text = station name)
-  + distractor organs (id "organ:<id>", text = organ name), shuffled, 2-column grid.
+  + helper organs from `quiz_helper_groups` and any `quiz_distractors` (id "organ:<id>"), shuffled, 2-column grid.
+  Unrevealed "?" boxes are drop/press targets.
+- Helper groups: before moving INTO station `before`, every organ in the group must be labelled by dropping its card
+  on its own box (or tap card, then tap box), any order. Prompt = the group's `prompt`. Wrong box = mistake;
+  open map = instruction only; right box at the wrong time, or the right next station while helpers are pending =
+  reminder only (no mistake). Correct = box shows NAME, green "Correct!" + the organ's `hint`.
   Prompt: "Drag the FIRST stop for the carrot onto the map!" then "The carrot is in the <name>. Drag the NEXT stop onto the map!"
 - Drop anywhere on the map (MapDropArea) or tap/Enter a card → submit. Correct = the next station: token travels there,
-  its boxes switch to NAME on arrival, card marked used, green "Correct!" + the station's `info`.
-  Wrong: mistakes += 1, card shakes, red feedback = the organ's `hint` for distractor cards, otherwise
+  its boxes switch to NAME at the border, card marked used, green "Correct!" + the station's `info`.
+  Wrong: mistakes += 1, card shakes, red feedback = the organ's `hint` for pure distractor cards, otherwise
   "Not quite. Where does food go after the <current name>?" (or "...go first?" at start). Ignore input while moving/busy.
 - After the last station: "Part 1 complete! Mistakes: N" and a `Go to Part 2` button (only if `system.has_match_quiz`).
 *Quiz part 2* (match functions):

@@ -7,9 +7,12 @@ shape as it is digested (whole → chewed → paste → liquid → waste).
 ## Modes
 - **Explore**: Step one station at a time or Play continuously. The side panel shows the type of
   digestion (mechanical, chemical, absorption), what happens, what is broken down, and which
-  helper organs (salivary glands, liver, gallbladder, pancreas) are involved.
-- **Quiz part 1**: drag the next stop onto the map. Wrong cards include organs food never passes
-  through (liver, pancreas, ...), each with a hint.
+  helper organs (salivary glands, liver, gallbladder, pancreas) are involved. The panel and map
+  highlights switch as soon as the carrot crosses into the next organ, not when it reaches the stop.
+- **Quiz part 1**: drag the next stop onto the map (anywhere). Before the carrot can move on, the
+  helper organs must be labelled by dropping each card on its own box: Salivary Glands before the
+  Esophagus; Liver, Gallbladder and Pancreas (any order) before the Small Intestine; Appendix before
+  the Large Intestine. A right card at the wrong time is a reminder, not a mistake.
 - **Quiz part 2**: drag each organ's job onto its label box.
 
 ## Controls

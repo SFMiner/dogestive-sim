@@ -31,6 +31,10 @@ func _init() -> void:
 	_build_organs()
 	_build_stations()
 	_build_segments()
+	# Where each leg crosses into the next organ's shape. Measured by testing every path point
+	# against the SVG's named shapes (_Path_OralCavity, _Path_Esophagus, StomachWalls,
+	# SmallIntestine, UpperColon, LowerColon = the purple rectum). Re-measure if the art changes.
+	segment_switch_t = [0.375, 0.18, 0.68, 0.13, 0.63, 0.734]
 
 
 func _box(x0: float, y0: float, x1: float, y1: float) -> Rect2:
@@ -102,7 +106,23 @@ func _build_organs() -> void:
 	}
 	organ_order = ["teeth", "tongue", "salivary", "esophagus", "liver", "gallbladder", "stomach",
 		"pancreas", "small_intestine", "large_intestine", "appendix", "rectum"]
-	quiz_distractors = ["salivary", "liver", "gallbladder", "pancreas", "appendix"]
+	# No pure red herrings: every non-tract organ has a "?" box on the map, so students must
+	# label each one (on its own box) before the carrot can move on. See quiz_helper_groups.
+	quiz_distractors = []
+	quiz_helper_groups = [
+		{
+			"before": ESOPHAGUS, "organs": ["salivary"],
+			"prompt": "Before you swallow, label the helper organ that works in the mouth. Drag it onto its own box!",
+		},
+		{
+			"before": SMALL_INTESTINE, "organs": ["liver", "gallbladder", "pancreas"],
+			"prompt": "Before the carrot moves on, label the 3 helper organs that send juices to the next stop!",
+		},
+		{
+			"before": LARGE_INTESTINE, "organs": ["appendix"],
+			"prompt": "Before the waste moves on, label the small dead-end pouch on the next part of the tract!",
+		},
+	]
 
 
 func _build_stations() -> void:

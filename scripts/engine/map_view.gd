@@ -1,9 +1,9 @@
 class_name MapView
 extends Node2D
-## Draws the map: white background, the artwork, a dot at every station and a pulsing
-## ring at the current station. Map-local space == screen. Knows only SimSystem.
+## Draws the map: white background, the artwork and a pulsing ring at the current station.
+## No station dots: the artwork's pink pointer dots already mark each stop.
+## Map-local space == screen. Knows only SimSystem.
 
-const COL_DOT: Color = Color(0.16, 0.13, 0.12)
 const COL_HIGHLIGHT: Color = Color("#e8641b")
 
 var _system: SimSystem
@@ -42,10 +42,6 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, _system.map_size), Color.WHITE)
 	if _background != null:
 		draw_texture_rect(_background, _system.background_rect, false)
-	for i: int in range(_system.station_count()):
-		var p: Vector2 = _system.station_pos(i)
-		draw_circle(p, 5.5, Color.WHITE, true, -1.0, true)
-		draw_circle(p, 3.5, COL_DOT, true, -1.0, true)
 	if _highlight >= 0:
 		var hp: Vector2 = _system.station_pos(_highlight)
 		var wave: float = 0.5 + 0.5 * sin(_pulse * 6.0)

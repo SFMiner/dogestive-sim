@@ -29,6 +29,9 @@ var start_label: String = ""
 ## }
 var stations: Array[Dictionary] = []
 var segments: Array[PackedVector2Array] = []
+## Fraction (0..1) along segments[i] where the token crosses the border into station i's organ.
+## The side panel and map highlights switch there instead of on arrival. Missing entries = 1.0.
+var segment_switch_t: Array[float] = []
 
 ## Organ id -> { "name": String, "box": Rect2, "function": String, "hint": String }
 ## "hint" is the feedback when the organ is wrongly picked as the next station in quiz part 1.
@@ -37,6 +40,13 @@ var organs: Dictionary = {}
 var organ_order: Array[String] = []
 ## Organ ids offered as wrong-answer cards in quiz part 1 (food never passes through them).
 var quiz_distractors: Array[String] = []
+## Quiz part 1: helper organs the student must label (drop each card on its own box) before
+## the token may move INTO a station. Each: {
+##   "before": int     – station index the group must be finished before,
+##   "organs": Array[String] – organ ids (any order),
+##   "prompt": String  – shown while the group is still unlabelled,
+## }
+var quiz_helper_groups: Array[Dictionary] = []
 ## Whether quiz part 2 (drag each organ's function onto its box) exists for this system.
 var has_match_quiz: bool = false
 
@@ -82,6 +92,31 @@ func point_on_segment(seg: int, t: float) -> Vector2:
 ## Seconds to travel a segment at the given speed (map px / s), clamped.
 func travel_time(seg: int, speed: float) -> float:
 	return clampf(segment_length(seg) / maxf(speed, 1.0), min_travel_time, max_travel_time)
+
+
+## Where along segment `seg` (0..1) the token enters the next station's organ.
+func switch_t(seg: int) -> float:
+	if seg >= 0 and seg < segment_switch_t.size():
+		return clampf(segment_switch_t[seg], 0.0, 1.0)
+	return 1.0
+
+
+## The helper group that must be labelled before entering `station`, or {} if none.
+func helper_group_before(station: int) -> Dictionary:
+	for g: Dictionary in quiz_helper_groups:
+		if int(g["before"]) == station:
+			return g
+	return {}
+
+
+## Every organ id that appears in a helper group.
+func all_quiz_helpers() -> Array[String]:
+	var ids: Array[String] = []
+	for g: Dictionary in quiz_helper_groups:
+		for oid: String in g["organs"]:
+			if not ids.has(oid):
+				ids.append(oid)
+	return ids
 
 
 ## Index of the station after `index`, or -1 when a linear system has ended.
