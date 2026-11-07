@@ -22,6 +22,7 @@ shape as it is digested (whole → chewed → paste → liquid → waste).
 | Right arrow / N | Step |
 | R | Reset / restart quiz |
 | M | Switch Explore / Quiz |
+| F11 | Full screen on/off (also the "Full screen" button) |
 | Tab, arrows, Enter | Move between and press buttons/cards/boxes |
 
 ## Project layout
